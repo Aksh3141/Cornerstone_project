@@ -1,28 +1,36 @@
-# Cornerstone_project
-🏗️ Project Structure
-This project is divided into a React (Vite) frontend and a Django backend.
+# 🎥 Cornerstone Video Moderation Project
 
-💻 Frontend
+A full-stack application designed to analyze and moderate video content using a React frontend and a Django-powered Machine Learning backend.
+
+---
+
+## 🏗️ Project Structure
+
+This repository contains both the frontend and backend source code.
+
+### 💻 Frontend (React + Vite + Tailwind v4)
+```text
 frontend/
-├── public/              # Static assets (favicons, etc.)
+├── public/              # Static assets
 ├── src/
-│   ├── assets/          # Images, global styles
-│   ├── components/      # Reusable UI components
+│   ├── assets/          # Global images and styles
+│   ├── components/      # UI Building blocks
 │   │   ├── common/      # Buttons, Inputs, Loaders
 │   │   ├── upload/      # Video upload logic
-│   │   ├── results/     # Analysis display components
+│   │   ├── results/     # Analysis display
 │   │   ├── video/       # Video player components
-│   │   └── layout/      # Navbar, Footer, Wrappers
-│   ├── pages/           # Main view components (Home, Analyze)
-│   ├── services/        # API communication (Django integration)
-│   ├── hooks/           # Custom React hooks (useVideoAnalysis)
-│   ├── utils/           # Helper functions (formatTime)
-│   ├── App.jsx          # Main application routing
-│   └── main.jsx         # Application entry point
-├── .env                 # Environment variables (Ignored by Git)
-└── package.json         # Frontend dependencies
+│   │   └── layout/      # Navbar and Footer
+│   ├── pages/           # Home & Analyze views
+│   ├── services/        # API calls (Django integration)
+│   ├── hooks/           # Custom hooks (useVideoAnalysis)
+│   ├── utils/           # Helpers (formatTime)
+│   ├── App.jsx          # Main Routing
+│   └── main.jsx         # Entry point
+└── package.json         # Dependencies
+```
 
-⚙️ Backend
+### ⚙️ Backend (Django + REST Framework)
+```text
 backend/
 ├── manage.py            # Django CLI tool
 ├── requirements.txt     # Python dependencies
@@ -36,9 +44,11 @@ backend/
 │   │   └── inference.py # Prediction logic
 │   └── tasks.py         # Background processing tasks
 └── media/               # User-uploaded content (Ignored by Git)
+```
 
-🚀 System Architecture & Flow
+### 🚀 System Architecture & Flow
 The following diagram represents the end-to-end data flow when a user interacts with the platform:
+```text
 graph TD
     A[User Selects Video] --> B[React: POST Request]
     B --> C[Django: Save Video to Media]
@@ -46,3 +56,4 @@ graph TD
     D --> E[Django: Save Results to DB]
     E --> F[API: Return JSON Response]
     F --> G[React: Update UI & Display Results]
+```
