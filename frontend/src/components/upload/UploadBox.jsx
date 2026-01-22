@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const MAX_FILE_SIZE_MB = 100;
 const ALLOWED_TYPES = ["video/mp4", "video/webm", "video/ogg"];
@@ -7,9 +8,12 @@ export default function UploadBox() {
   const [file, setFile] = useState(null);
   const [error, setError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const navigate = useNavigate();
+
 
   const handleFileChange = (e) => {
     const selected = e.target.files[0];
+
     setError("");
 
     if (!selected) {
@@ -35,36 +39,12 @@ export default function UploadBox() {
     setFile(selected);
   };
 
-  const handleUpload = async () => {
-    if (!file || isUploading) return;
+  const handleUpload = () => {
+  if (!file) return;
 
-    setIsUploading(true);
-    setError("");
-
-    try {
-      const formData = new FormData();
-      formData.append("video", file);
-
-      // 🔌 Django endpoint placeholder
-      const response = await fetch("http://localhost:8000/api/moderate/", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error("Upload failed");
-      }
-
-      const data = await response.json();
-      console.log("Backend response:", data);
-
-      // Next step: route to results page
-    } catch (err) {
-      setError("Something went wrong. Please try again.");
-    } finally {
-      setIsUploading(false);
-    }
-  };
+  // ✅ For now: directly go to results page
+  navigate("/results");
+};
 
   return (
     <div className="w-full max-w-xl mx-auto rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -74,8 +54,8 @@ export default function UploadBox() {
         <input
           type="file"
           accept="video/*"
-          className="hidden"
           onChange={handleFileChange}
+          className="hidden"
         />
 
         <span className="text-sm text-gray-600">

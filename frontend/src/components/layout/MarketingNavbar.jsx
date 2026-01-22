@@ -128,6 +128,11 @@ export default function Navbar() {
         {/* CTA */}
         <button
           className="group relative overflow-hidden rounded-lg bg-black px-4 py-2 text-sm font-medium text-white transition-all duration-300 ease-out hover:-translate-y-px hover:shadow-[0_8px_24px_rgba(0,0,0,0.18)] active:translate-y-0"
+          onClick={() =>
+                document
+                  .getElementById("upload-section")
+                  ?.scrollIntoView({ behavior: "smooth" })
+              }
         >
           <span className="relative z-10">Get started</span>
           <span className="pointer-events-none absolute inset-0 bg-linear-to-r from-transparent via-white/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />

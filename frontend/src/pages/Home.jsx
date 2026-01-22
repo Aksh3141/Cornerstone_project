@@ -49,7 +49,7 @@ export default function Home() {
           {/* CTAs */}
           <div className="mt-10 flex justify-center gap-4">
             <button
-              className="group relative overflow-hidden rounded-lg bg-black px-6 py-3 text-sm font-medium text-white transition-all duration-300 ease-out hover:-translate-y-[1px] hover:shadow-[0_10px_30px_rgba(0,0,0,0.2)]"
+              className="group relative overflow-hidden rounded-lg bg-black px-6 py-3 text-sm font-medium text-white transition-all duration-300 ease-out hover:-translate-y-px hover:shadow-[0_10px_30px_rgba(0,0,0,0.2)]"
               onClick={() =>
                 document
                   .getElementById("upload-section")
@@ -57,7 +57,7 @@ export default function Home() {
               }
             >
               <span className="relative z-10">Try it now</span>
-              <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+              <span className="pointer-events-none absolute inset-0 bg-linear-to-r from-transparent via-white/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
             </button>
 
             <a
@@ -75,11 +75,81 @@ export default function Home() {
         id="upload-section"
         className="px-6 pt-16 pb-24 bg-white"
       >
-        {/* Divider belongs to upload section */}
-        <div className="mx-auto max-w-3xl border-t border-gray-300 mb-16" />
+        <div className="mx-auto max-w-xl text-center mb-10">
+          <h2 className="text-2xl font-semibold text-black mb-2">
+            Analyze a video
+          </h2>
+          <p className="text-sm text-gray-600">
+            Your video is analyzed temporarily and is not stored on our servers.
+          </p>
+        </div>
 
         <UploadBox />
       </section>
+      
+      {/* HOW IT WORKS SECTION */}
+      <section
+        id="how-it-works"
+        className="px-6 pb-32 bg-white"
+      >
+        <div className="mx-auto max-w-6xl text-center">
+          <h2 className="text-2xl font-semibold text-black mb-16">
+            How it works
+          </h2>
+
+          <div className="flex flex-col md:flex-row items-center justify-center gap-6">
+
+            {/* Step 1 */}
+            <div className="w-full md:w-1/3 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 p-6 text-left shadow-sm">
+              <div className="text-2xl mb-3">📤</div>
+              <h3 className="text-base font-medium text-black mb-2">
+                Upload a video
+              </h3>
+              <p className="text-sm text-gray-600">
+                Upload a video file that you want to analyze for potentially sensitive
+                or unsafe content.
+              </p>
+            </div>
+
+            {/* Arrow */}
+            <div className="hidden md:block text-gray-400 text-2xl">
+              →
+            </div>
+
+            {/* Step 2 */}
+            <div className="w-full md:w-1/3 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 p-6 text-left shadow-sm">
+              <div className="text-2xl mb-3">🧠</div>
+              <h3 className="text-base font-medium text-black mb-2">
+                Multimodal analysis
+              </h3>
+              <p className="text-sm text-gray-600">
+                The system analyzes visual frames, audio signals, and extracted text
+                using specialized machine learning models.
+              </p>
+            </div>
+
+            {/* Arrow */}
+            <div className="hidden md:block text-gray-400 text-2xl">
+              →
+            </div>
+
+            {/* Step 3 */}
+            <div className="w-full md:w-1/3 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 p-6 text-left shadow-sm">
+              <div className="text-2xl mb-3">📊</div>
+              <h3 className="text-base font-medium text-black mb-2">
+                Results & verdict
+              </h3>
+              <p className="text-sm text-gray-600">
+                Receive confidence scores, flagged timestamps, and a clear moderation
+                verdict for the video.
+              </p>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+
 
       <Footer />
     </>
