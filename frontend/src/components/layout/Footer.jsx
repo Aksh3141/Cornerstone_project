@@ -34,7 +34,7 @@ export default function Footer() {
             href="#"
             className="text-gray-500 hover:text-black transition"
             >
-            Research paper
+            Docs
             </a>
 
             <a

@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 const MAX_FILE_SIZE_MB = 100;
 const ALLOWED_TYPES = ["video/mp4", "video/webm", "video/ogg"];
 
-export default function UploadBox() {
+export default function UploadBox({ compact = false }) {
   const [file, setFile] = useState(null);
   const [error, setError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
@@ -47,8 +47,21 @@ export default function UploadBox() {
 };
 
   return (
-    <div className="w-full max-w-xl mx-auto rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-      <h3 className="text-lg font-semibold mb-4">Upload a video</h3>
+    <div
+      className={`w-full max-w-xl mx-auto rounded-xl bg-white shadow-sm ${
+        compact
+          ? "p-4"
+          : "p-6 border border-gray-200"
+      }`}
+    >
+      <h3
+        className={`font-semibold ${
+          compact ? "text-base mb-3" : "text-lg mb-4"
+        }`}
+      >
+        Upload a video
+      </h3>
+
 
       <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-lg p-6 cursor-pointer hover:border-gray-400 transition">
         <input
@@ -72,17 +85,23 @@ export default function UploadBox() {
       )}
 
       <button
-        onClick={handleUpload}
-        disabled={!file || isUploading}
-        className={`mt-4 w-full rounded-lg px-4 py-2 font-medium text-white transition
-          ${
-            !file || isUploading
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-black hover:bg-gray-900"
-          }`}
-      >
-        {isUploading ? "Analyzing video..." : "Upload & Analyze"}
-      </button>
+      onClick={handleUpload}
+      disabled={!file || isUploading}
+      className={`mt-4 w-full rounded-lg font-medium text-white transition
+        ${
+          compact
+            ? "px-4 py-2 text-sm"
+            : "px-6 py-3 text-base"
+        }
+        ${
+          !file || isUploading
+            ? "bg-gray-400 cursor-not-allowed"
+            : "bg-black hover:bg-gray-900"
+        }`}
+    >
+      {isUploading ? "Analyzing video..." : "Upload & Analyze"}
+    </button>
+
     </div>
   );
 }

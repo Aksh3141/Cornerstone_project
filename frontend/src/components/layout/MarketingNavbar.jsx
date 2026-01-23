@@ -1,16 +1,19 @@
 import { useEffect, useState } from "react";
 import logoSmall from "../../assets/logo-small.png";
+import { Link, useLocation } from "react-router-dom";
+
 
 const NAV_ITEMS = [
-  { id: "how-it-works", label: "How it works" },
-  { id: "api", label: "API" },
-  { id: "docs", label: "Docs" },
+  { id: "how-it-works", label: "How it works", type: "scroll" },
+  { id: "api", label: "API", type: "route", path: "/api" },
+  { id: "docs", label: "Docs", type: "route", path: "/docs" },
 ];
 
 export default function Navbar() {
   const [activeSection, setActiveSection] = useState(null);
   const [hasShadow, setHasShadow] = useState(false);
-
+  const location = useLocation();
+  
   // Scroll shadow
   useEffect(() => {
     const handleScroll = () => {
@@ -76,8 +79,9 @@ export default function Navbar() {
 
         {/* Navigation */}
         <ul className="hidden md:flex items-center gap-8 text-sm">
-          {NAV_ITEMS.map(({ id, label }) => (
+          {NAV_ITEMS.map(({ id, label, type, path }) => (
             <li key={id} className="relative group">
+              {type === "scroll" ? (
               <a
                 href={`#${id}`}
                 className={`pb-1 transition ${
@@ -88,16 +92,28 @@ export default function Navbar() {
               >
                 {label}
               </a>
+            ) : (
+              <Link
+                to={path}
+                className={`pb-1 transition ${
+                  location.pathname === path
+                    ? "text-black"
+                    : "text-gray-600 hover:text-black"
+                }`}
+              >
+              {label}
+              </Link>
+            )}
+
               <span
                 className={`
-                  absolute left-0 -bottom-1 h-0.5
-                  transition-all duration-300
-                  ${
-                    activeSection === id
-                      ? "w-full bg-brand"
-                      : "w-0 bg-black group-hover:w-full"
-                  }
-                `}
+                absolute left-0 -bottom-1 h-0.5 transition-all duration-300
+                ${
+                  type === "scroll" && activeSection === id
+                    ? "w-full bg-brand"
+                    : "w-0 bg-black group-hover:w-full"
+                }
+              `}
               />
             </li>
           ))}

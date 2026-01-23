@@ -1,5 +1,6 @@
 import MarketingNavbar from "../components/layout/MarketingNavbar";
 import Footer from "../components/layout/Footer";
+import UploadBox from "../components/upload/UploadBox";
 
 const mockResults = {
   verdict: "Violent content detected",
@@ -231,15 +232,20 @@ export default function Results() {
             </section>
 
 
-          {/* ACTIONS */}
-          <section>
-            <a
-              href="/"
-              className="inline-block rounded-lg border border-gray-300 px-4 py-2 text-sm hover:border-black transition"
-            >
-              Analyze another video
-            </a>
-          </section>
+          {/* ANALYZE ANOTHER VIDEO */}
+        <section className="pt-12 border-t border-gray-200">
+        <div className="max-w-xl">
+            <h2 className="text-base font-semibold text-black mb-2">
+            Analyze another video
+            </h2>
+            <p className="text-sm text-gray-600 mb-6">
+            Upload a new video to run content moderation analysis again.
+            </p>
+
+            {/* Reuse UploadBox component */}
+            <UploadBox compact />
+        </div>
+        </section>
 
         </div>
       </main>
