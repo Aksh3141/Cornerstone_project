@@ -4,7 +4,7 @@ import uuid
 
 from models.audio.inference import predict_audio
 from models.vision.inference import predict_vision
-from models.text.inference import predict_text
+from models.text.inference import predict_text, extract_ocr_text
 
 from utils.media import extract_audio_from_video, get_video_duration
 from utils.transcription import transcribe_audio
@@ -125,6 +125,10 @@ def aggregate_text_segments(segment_results, full_transcript=""):
 # MAIN PIPELINE
 # ==============================
 
+# ADD THIS IMPORT AT TOP
+from models.text.inference import predict_text, extract_ocr_text
+
+
 def process_video(video_path: str):
 
     base_name = str(uuid.uuid4())
@@ -134,7 +138,14 @@ def process_video(video_path: str):
         video_duration = get_video_duration(video_path)
 
         # ======================
-        # 1. AUDIO HANDLING
+        # 🔥 GLOBAL OCR (ONCE)
+        # ======================
+        print("🔍 Running OCR on full video...")
+        full_ocr_text = extract_ocr_text(video_path)
+        print("✅ OCR Done")
+
+        # ======================
+        # AUDIO HANDLING
         # ======================
         audio_file = extract_audio_from_video(video_path, audio_path)
 
@@ -154,9 +165,6 @@ def process_video(video_path: str):
         segment_results = []
         full_transcript = []
 
-        # ======================
-        # 2. LOAD VIDEO
-        # ======================
         video = VideoFileClip(video_path)
 
         for seg in segments:
@@ -182,7 +190,7 @@ def process_video(video_path: str):
                     logger=None
                 )
 
-                # 🔥 AUDIO ONLY IF EXISTS
+                # AUDIO
                 if has_audio and subclip.audio is not None:
                     subclip.audio.write_audiofile(
                         seg_audio_path,
@@ -198,7 +206,9 @@ def process_video(video_path: str):
                         "hate_speech": 0.0
                     }
 
-                text_scores = predict_text(text, seg_video_path)
+                # 🔥 TEXT (NOW USING GLOBAL OCR)
+                text_scores = predict_text(text, ocr_text=full_ocr_text)
+
                 vision_scores = predict_vision(seg_video_path)
 
                 segment_results.append({
@@ -224,9 +234,6 @@ def process_video(video_path: str):
         video.close()
         gc.collect()
 
-        # ======================
-        # FINAL OUTPUT
-        # ======================
         text_modality = aggregate_text_segments(
             segment_results,
             full_transcript=" ".join(full_transcript)
