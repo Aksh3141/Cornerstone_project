@@ -12,7 +12,7 @@ from utils.transcription import transcribe_audio
 from moviepy.video.io.VideoFileClip import VideoFileClip
 
 TEMP_DIR = "temp"
-
+USE_OCR = False
 
 # ==============================
 # CLAMP SEGMENTS
@@ -140,9 +140,13 @@ def process_video(video_path: str):
         # ======================
         # 🔥 GLOBAL OCR (ONCE)
         # ======================
-        print("🔍 Running OCR on full video...")
-        full_ocr_text = extract_ocr_text(video_path)
-        print("✅ OCR Done")
+        if USE_OCR:
+            print("🔍 Running OCR on full video...")
+            full_ocr_text = extract_ocr_text(video_path)
+            print("✅ OCR Done")
+        else:
+            print("🚫 OCR disabled")
+            full_ocr_text = ""
 
         # ======================
         # AUDIO HANDLING
