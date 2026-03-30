@@ -52,25 +52,29 @@ except Exception as e:
 # ==============================
 
 def combine_probs(p_n, p_v):
-    """
-    Convert binary outputs → stable 3-class distribution
-    """
+    # Step 1: cap overlap
+    overlap = p_n * p_v
 
-    # Neutral suppressed by strongest signal
-    neutral = max(0.0, 1.0 - max(p_n, p_v))
+    # Step 2: adjusted signals
+    p_n_adj = p_n * (1 - p_v)
+    p_v_adj = p_v * (1 - p_n)
 
-    # Normalize
-    total = neutral + p_n + p_v
+    # Step 3: neutral = remaining probability mass
+    neutral = max(0.0, 1 - (p_n_adj + p_v_adj + overlap))
+
+    # Step 4: normalize
+    total = neutral + p_n_adj + p_v_adj + overlap
+
     if total > 0:
         neutral /= total
-        p_n /= total
-        p_v /= total
+        p_n_adj /= total
+        p_v_adj /= total
 
     return {
         "neutral": float(neutral),
-        "sexual_content": float(p_n),
-        "violence": float(p_v),
-        "hate_speech": 0.0  # vision can't detect this
+        "sexual_content": float(p_n_adj),
+        "violence": float(p_v_adj),
+        "hate_speech": 0.0
     }
 
 
