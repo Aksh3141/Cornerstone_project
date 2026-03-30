@@ -93,7 +93,8 @@ def translate_to_english(text):
 def extract_ocr_text(video_path):
     try:
         os.makedirs(TEMP_OCR_DIR, exist_ok=True)
-        frames = extract_smart_frames(video_path, TEMP_OCR_DIR)
+
+        frames = extract_smart_frames(video_path,TEMP_OCR_DIR,max_frames=3)
 
         if not frames:
             return ""
@@ -106,7 +107,6 @@ def extract_ocr_text(video_path):
     except Exception as e:
         print(f"❌ OCR error: {e}")
         return ""
-
 
 # ==============================
 # KEYWORD OVERRIDE
@@ -184,10 +184,10 @@ def classify_text(text):
 # FINAL PIPELINE FUNCTION
 # ==============================
 
-def predict_text(text, video_path=None):
+def predict_text(text, ocr_text=None):
 
     try:
-        # 1. CLEAN
+        # 1. CLEAN TRANSCRIPT
         text = clean_text(text)
 
         if is_garbage_text(text):
@@ -200,10 +200,8 @@ def predict_text(text, video_path=None):
             if lang == "hi":
                 text = translate_to_english(text)
 
-        # 3. OCR
-        ocr_text = ""
-        if video_path:
-            ocr_text = clean_text(extract_ocr_text(video_path))
+        # 3. CLEAN OCR
+        ocr_text = clean_text(ocr_text or "")
 
         # 4. COMBINE
         combined = f"{text} {ocr_text}".strip()
@@ -212,7 +210,8 @@ def predict_text(text, video_path=None):
         print("OCR TEXT:", ocr_text)
         print("COMBINED:", combined)
 
-        if not combined:
+        # 🔥 FIX: only neutral if BOTH empty
+        if not text and not ocr_text:
             return {
                 "neutral": 1.0,
                 "sexual_content": 0.0,
