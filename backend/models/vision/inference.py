@@ -1,11 +1,7 @@
 import os
 import torch
 
-# import new model logic
-from models.vision.video_model import (
-    InferConfig,
-    classify_video_clips
-)
+from models.vision.model import Model, Config, preprocess
 
 # ==============================
 # CONFIG
@@ -14,60 +10,95 @@ from models.vision.video_model import (
 CLASSES = ["neutral", "sexual_content", "violence", "hate_speech"]
 
 BASE_DIR = os.path.dirname(__file__)
-MODEL_PATH = os.path.join(BASE_DIR, "best_model.pt")
+
+VIOLENCE_MODEL_PATH = os.path.join(BASE_DIR, "violence_best.pth")
+NUDITY_MODEL_PATH = os.path.join(BASE_DIR, "nudity_best.pth")
+
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # ==============================
-# LOAD CONFIG
+# LOAD MODELS (ONCE)
 # ==============================
 
-print("🎥 Loading Vision Model...")
+print("🎥 Loading Vision Models...")
+
+CFG = Config()
 
 try:
-    cfg = InferConfig(checkpoint=MODEL_PATH)
-    print("✅ Vision model ready")
+    # Violence model
+    violence_model = Model(CFG).to(DEVICE)
+    violence_model.load_state_dict(
+        torch.load(VIOLENCE_MODEL_PATH, map_location=DEVICE)
+    )
+    violence_model.eval()
+
+    # Nudity model
+    nudity_model = Model(CFG).to(DEVICE)
+    nudity_model.load_state_dict(
+        torch.load(NUDITY_MODEL_PATH, map_location=DEVICE)
+    )
+    nudity_model.eval()
+
+    print("✅ Vision models ready")
+
 except Exception as e:
     print(f"❌ Vision model load error: {e}")
-    cfg = None
+    violence_model = None
+    nudity_model = None
 
 
 # ==============================
-# PROBABILITY MAPPING
+# PROBABILITY COMBINATION
 # ==============================
 
-def map_to_distribution(p_n, p_v):
+def combine_probs(p_n, p_v):
     """
-    Convert Bernoulli outputs → proper distribution
+    Convert binary outputs → stable 3-class distribution
     """
 
-    sexual_content = p_n
-    violence = p_v
+    # Neutral suppressed by strongest signal
+    neutral = max(0.0, 1.0 - max(p_n, p_v))
 
-    neutral = (1 - p_n) * (1 - p_v)
+    # Normalize
+    total = neutral + p_n + p_v
+    if total > 0:
+        neutral /= total
+        p_n /= total
+        p_v /= total
 
     return {
         "neutral": float(neutral),
-        "sexual_content": float(sexual_content),
-        "violence": float(violence),
-        "hate_speech": 0.0
+        "sexual_content": float(p_n),
+        "violence": float(p_v),
+        "hate_speech": 0.0  # vision can't detect this
     }
 
 
 # ==============================
-# MAIN FUNCTION
+# MAIN INFERENCE FUNCTION
 # ==============================
 
 def predict_vision(video_path: str):
+    """
+    Input: video clip path
+    Output: probability distribution
+    """
 
-    if cfg is None:
+    if violence_model is None or nudity_model is None:
         return {c: 0.0 for c in CLASSES}
 
     try:
-        result = classify_video_clips(video_path, cfg)
+        # Preprocess video → tensor
+        video = preprocess(video_path).to(DEVICE)
 
-        p_n = result.get("nudity_prob", 0.0)
-        p_v = result.get("violence_prob", 0.0)
+        with torch.no_grad():
+            v_logit = violence_model(video)
+            n_logit = nudity_model(video)
 
-        return map_to_distribution(p_n, p_v)
+            p_v = torch.sigmoid(v_logit).item()
+            p_n = torch.sigmoid(n_logit).item()
+
+        return combine_probs(p_n, p_v)
 
     except Exception as e:
         print(f"❌ Vision inference error: {e}")
