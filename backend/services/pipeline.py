@@ -1,7 +1,8 @@
 import os
 import gc
 import uuid
-
+import torch
+import time
 from models.audio.inference import predict_audio
 from models.vision.inference import predict_vision
 from models.text.inference import predict_text, extract_ocr_text
@@ -125,9 +126,145 @@ def aggregate_text_segments(segment_results, full_transcript=""):
 # MAIN PIPELINE
 # ==============================
 
-# ADD THIS IMPORT AT TOP
-from models.text.inference import predict_text, extract_ocr_text
+def average_modalities(segment_results, modality):
+    if not segment_results:
+        return {
+            "neutral": 1.0,
+            "sexual_content": 0.0,
+            "violence": 0.0,
+            "hate_speech": 0.0
+        }
 
+    avg = {k: 0.0 for k in ["neutral", "sexual_content", "violence", "hate_speech"]}
+    count = 0
+
+    for seg in segment_results:
+        m = seg["modalities"].get(modality)
+        if not m:
+            continue
+
+        count += 1
+        for k in avg:
+            avg[k] += m.get(k, 0.0)
+
+    if count == 0:
+        return avg
+
+    for k in avg:
+        avg[k] /= count
+
+    return avg
+
+
+def combine_modalities(modalities):
+
+    text = modalities["text"]
+    audio = modalities["audio"]
+    vision = modalities["vision"]
+
+    scores = {
+        "neutral": 0.0,
+        "sexual_content": 0.0,
+        "violence": 0.0,
+        "hate_speech": 0.0
+    }
+
+    vision_sex = vision.get("sexual_content", 0)
+    text_hate = text.get("hate_speech", 0)
+
+    # =========================
+    # PRIORITY 1: SEXUAL
+    # =========================
+    if vision_sex > 0.95:
+
+        scores["sexual_content"] = 0.9
+
+        remaining = 1.0 - scores["sexual_content"]
+
+        v = (
+            0.6 * vision.get("violence", 0) +
+            0.25 * audio.get("violence", 0) +
+            0.15 * text.get("violence", 0)
+        )
+
+        v = max(0.0, min(v, 1.0))
+        n = 1.0 - v
+
+        total = v + n
+        if total > 0:
+            v /= total
+            n /= total
+
+        scores["violence"] = remaining * v
+        scores["neutral"] = remaining * n
+        scores["hate_speech"] = 0.0
+
+        return scores
+
+    # =========================
+    # PRIORITY 2: HATE
+    # =========================
+    if text_hate > 0.1:
+
+        scores["hate_speech"] = 0.85
+
+        remaining = 1.0 - scores["hate_speech"]
+
+        v = (
+            0.6 * vision.get("violence", 0) +
+            0.25 * audio.get("violence", 0) +
+            0.15 * text.get("violence", 0)
+        )
+
+        v = max(0.0, min(v, 1.0))
+        n = 1.0 - v
+
+        total = v + n
+        if total > 0:
+            v /= total
+            n /= total
+
+        scores["violence"] = remaining * v
+        scores["neutral"] = remaining * n
+
+        scores["sexual_content"] = 0.01  # suppress sexual
+
+        return scores
+
+    # =========================
+    # NO HARD RULE → FUSION
+    # =========================
+
+    v = (
+        0.6 * vision.get("violence", 0) +
+        0.25 * audio.get("violence", 0) +
+        0.15 * text.get("violence", 0)
+    )
+
+    v = max(0.0, min(v, 1.0))
+    n = 1.0 - v
+
+    total = v + n
+    if total > 0:
+        v /= total
+        n /= total
+
+    scores["violence"] = v
+    scores["neutral"] = n
+
+    # enforce NOT sexual / NOT hate
+    scores["sexual_content"] = min(0.05, vision_sex * 0.05)
+    scores["hate_speech"] = min(0.05, text_hate * 0.05)
+
+    # =========================
+    # FINAL NORMALIZATION
+    # =========================
+    total = sum(scores.values())
+    if total > 0:
+        for k in scores:
+            scores[k] /= total
+
+    return scores
 
 def process_video(video_path: str):
 
@@ -137,20 +274,14 @@ def process_video(video_path: str):
     try:
         video_duration = get_video_duration(video_path)
 
-        # ======================
-        # 🔥 GLOBAL OCR (ONCE)
-        # ======================
+        # OCR
         if USE_OCR:
             print("🔍 Running OCR on full video...")
             full_ocr_text = extract_ocr_text(video_path)
-            print("✅ OCR Done")
         else:
-            print("🚫 OCR disabled")
             full_ocr_text = ""
 
-        # ======================
-        # AUDIO HANDLING
-        # ======================
+        # AUDIO
         audio_file = extract_audio_from_video(video_path, audio_path)
 
         if audio_file is None:
@@ -174,6 +305,9 @@ def process_video(video_path: str):
         for seg in segments:
             start, end, text = seg["start"], seg["end"], seg["text"]
 
+            if end <= start:
+                continue
+
             full_transcript.append(text)
 
             seg_id = str(uuid.uuid4())
@@ -181,9 +315,6 @@ def process_video(video_path: str):
             seg_video_path = os.path.join(TEMP_DIR, f"{seg_id}.mp4")
 
             try:
-                if end <= start:
-                    continue
-
                 subclip = video.subclip(start, end)
 
                 subclip.write_videofile(
@@ -210,9 +341,10 @@ def process_video(video_path: str):
                         "hate_speech": 0.0
                     }
 
-                # 🔥 TEXT (NOW USING GLOBAL OCR)
+                # TEXT
                 text_scores = predict_text(text, ocr_text=full_ocr_text)
 
+                # VISION
                 vision_scores = predict_vision(seg_video_path)
 
                 segment_results.append({
@@ -232,25 +364,104 @@ def process_video(video_path: str):
             finally:
                 if os.path.exists(seg_audio_path):
                     os.remove(seg_audio_path)
+
                 if os.path.exists(seg_video_path):
                     os.remove(seg_video_path)
 
         video.close()
+
+        # 🔥 DELETE MAIN AUDIO (CORRECT PLACE)
+        if os.path.exists(audio_path):
+            os.remove(audio_path)
+
         gc.collect()
+
+        # ======================
+        # AGGREGATION (YOUR ORIGINAL + NEW)
+        # ======================
 
         text_modality = aggregate_text_segments(
             segment_results,
             full_transcript=" ".join(full_transcript)
         )
 
+        # average audio + vision
+        def avg_modality(name):
+            avg = {k: 0.0 for k in ["neutral","sexual_content","violence","hate_speech"]}
+            count = 0
+
+            for seg in segment_results:
+                m = seg["modalities"].get(name)
+                if not m:
+                    continue
+                count += 1
+                for k in avg:
+                    avg[k] += m.get(k, 0.0)
+
+            if count > 0:
+                for k in avg:
+                    avg[k] /= count
+
+            return avg
+
+        audio_modality = avg_modality("audio")
+        vision_modality = avg_modality("vision")
+
+        modalities = {
+            "text": text_modality,
+            "audio": audio_modality,
+            "vision": vision_modality
+        }
+
+        # ======================
+        # FINAL FUSION (YOUR LOGIC)
+        # ======================
+
+        def g(m, k):
+            return m.get(k, 0.0)
+
+        final_scores = {}
+
+        # Neutral
+        final_scores["neutral"] = (
+            g(text_modality, "neutral") +
+            g(audio_modality, "neutral") +
+            g(vision_modality, "neutral")
+        ) / 3.0
+
+        # Hate → text only
+        final_scores["hate_speech"] = g(text_modality, "hate_speech")
+
+        # Violence
+        final_scores["violence"] = (
+            0.5 * g(vision_modality, "violence") +
+            0.25 * g(audio_modality, "violence") +
+            0.25 * g(text_modality, "violence")
+        )
+
+        # Sexual
+        final_scores["sexual_content"] = (
+            0.6 * g(vision_modality, "sexual_content") +
+            0.3 * g(audio_modality, "sexual_content") +
+            0.1 * g(text_modality, "sexual_content")
+        )
+
+        # Normalize
+        total = sum(final_scores.values())
+        if total > 0:
+            for k in final_scores:
+                final_scores[k] /= total
+
+        final_label = max(final_scores, key=final_scores.get)
+        confidence = final_scores[final_label]
+
         return {
-            "verdict": "frontend_computed",
-            "confidence": 0.0,
+            "verdict": final_label,
+            "confidence": confidence,
+            "final_scores": final_scores,
             "segments": segment_results,
             "transcript": " ".join(full_transcript).strip(),
-            "modalities": {
-                "text": text_modality
-            }
+            "modalities": modalities
         }
 
     except Exception as e:

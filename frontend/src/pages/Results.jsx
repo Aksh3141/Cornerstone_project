@@ -113,81 +113,9 @@ export default function Results() {
 
   const data = results;
   const segments = data?.segments || [];
-
-  // ======================
-  // SAFE AVERAGING
-  // ======================
-
-  const averageScores = (segments, modality) => {
-    if (!segments || segments.length === 0) return null;
-
-    const sum = {
-      neutral: 0,
-      sexual_content: 0,
-      violence: 0,
-      hate_speech: 0,
-    };
-
-    let count = 0;
-
-    segments.forEach(seg => {
-      const m = seg?.modalities?.[modality];
-      if (!m) return;
-
-      count++;
-
-      Object.keys(sum).forEach(k => {
-        sum[k] += m[k] || 0;
-      });
-    });
-
-    if (count === 0) return null;
-
-    Object.keys(sum).forEach(k => {
-      sum[k] /= count;
-    });
-
-    return sum;
-  };
-
-  const modalities = {
-    text: data?.modalities?.text || {},
-    audio: averageScores(segments, "audio") || {},
-    vision: averageScores(segments, "vision") || {},
-  };
-
-  const combineModalities = (modalities) => {
-    const combined = {
-      neutral: 0,
-      sexual_content: 0,
-      violence: 0,
-      hate_speech: 0,
-    };
-
-    let count = 0;
-
-    Object.values(modalities).forEach(m => {
-      if (!m || Object.keys(m).length === 0) return;
-
-      count++;
-
-      Object.keys(combined).forEach(k => {
-        combined[k] += m[k] || 0;
-      });
-    });
-
-    if (count === 0) return combined;
-
-    Object.keys(combined).forEach(k => {
-      combined[k] /= count;
-    });
-
-    return combined;
-  };
-
-  const finalScores = combineModalities(modalities);
-
-  const finalLabel = Object.entries(finalScores).sort((a, b) => b[1] - a[1])[0]?.[0] || "neutral";
+  const modalities = data?.modalities || {};
+  const finalScores = data?.final_scores || {};
+  const finalLabel = data?.verdict || "neutral";
 
   return (
     <>

@@ -50,33 +50,54 @@ except Exception as e:
 # ==============================
 # PROBABILITY COMBINATION
 # ==============================
-
 def combine_probs(p_n, p_v):
-    # Step 1: cap overlap
-    overlap = p_n * p_v
+    """
+    STRICT threshold-based mapping (as specified)
+    """
 
-    # Step 2: adjusted signals
-    p_n_adj = p_n * (1 - p_v)
-    p_v_adj = p_v * (1 - p_n)
+    # =========================
+    # SEXUAL CONTENT
+    # =========================
+    if p_n >= 0.999:
+        sexual = 0.96  # fixed strong confidence (can tweak 0.95–0.98)
+    else:
+        sexual = 0.02  # strictly low (0.00–0.05 range)
 
-    # Step 3: neutral = remaining probability mass
-    neutral = max(0.0, 1 - (p_n_adj + p_v_adj + overlap))
+    # =========================
+    # VIOLENCE
+    # =========================
+    if p_v > 0.10:
+        violence = 0.96  # strong
+    elif 0.05 <= p_v <= 0.10:
+        violence = 0.12  # medium (within 0.05–0.20)
+    else:
+        violence = 0.02  # weak (<0.05)
 
-    # Step 4: normalize
-    total = neutral + p_n_adj + p_v_adj + overlap
+    # =========================
+    # NEUTRAL (adjust accordingly)
+    # =========================
+    neutral = 1.0 - (sexual + violence)
+
+    # prevent negative
+    if neutral < 0:
+        neutral = 0.0
+
+    # =========================
+    # NORMALIZE
+    # =========================
+    total = neutral + sexual + violence
 
     if total > 0:
         neutral /= total
-        p_n_adj /= total
-        p_v_adj /= total
+        sexual /= total
+        violence /= total
 
     return {
         "neutral": float(neutral),
-        "sexual_content": float(p_n_adj),
-        "violence": float(p_v_adj),
+        "sexual_content": float(sexual),
+        "violence": float(violence),
         "hate_speech": 0.0
     }
-
 
 # ==============================
 # MAIN INFERENCE FUNCTION
