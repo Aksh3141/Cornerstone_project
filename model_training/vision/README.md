@@ -57,21 +57,6 @@ Both violence datasets are combined to train a single violence detection model.
 - Normalization: ImageNet mean/std `([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])`
 - Training augmentations: Random horizontal flip, ColorJitter
 
-### Citation
-If you use the SCVD dataset, please cite:
-​```bibtex
-@InProceedings{10.1007/978-3-031-62269-4_2,
-  author    = {Aremu, Toluwani and Zhiyuan, Li and Alameeri, Reem and Khan, Mustaqeem and Saddik, Abdulmotaleb El},
-  editor    = {Arai, Kohei},
-  title     = {SSIVD-Net: A Novel Salient Super Image Classification and Detection Technique for Weaponized Violence},
-  booktitle = {Intelligent Computing},
-  year      = {2024},
-  publisher = {Springer Nature Switzerland},
-  address   = {Cham},
-  pages     = {16--35},
-  isbn      = {978-3-031-62269-4}
-}
-​```
 
 ---
 
