@@ -6,7 +6,7 @@ A deep learning system for automatic video content moderation that detects **vio
 
 ## 📐 Model Architecture
 
-![Model Architecture](model.png)
+![Model Architecture](assets/model.png)
 
 The model is a **CNN + Transformer hybrid** designed for temporal video understanding. It processes videos as sequences of frames and uses both spatial (per-frame) and temporal (cross-frame) reasoning to make a binary prediction.
 
