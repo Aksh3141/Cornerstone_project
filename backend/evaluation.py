@@ -4,19 +4,10 @@ import pandas as pd
 from tqdm import tqdm
 import time
 
-# ==============================
-# CONFIG
-# ==============================
-
 BACKEND_URL = "http://127.0.0.1:8000/api/moderate-video"
 
 REQUEST_TIMEOUT = 180  # seconds
 DELAY_BETWEEN_REQUESTS = 2
-
-
-# ==============================
-# GET VIDEOS FROM ONE FOLDER
-# ==============================
 
 def get_videos_from_folder(folder_path, true_class):
     data = []
@@ -36,17 +27,12 @@ def get_videos_from_folder(folder_path, true_class):
     return data
 
 
-# ==============================
-# ROUND FUNCTION
-# ==============================
 
+# Round Function
 def r(x):
     return round(float(x), 2) if x is not None else 0.0
 
-
-# ==============================
-# MAIN EVALUATION
-# ==============================
+# Main Evaluation
 
 def evaluate_single_class(folder_path, true_class):
     videos = get_videos_from_folder(folder_path, true_class)
@@ -138,14 +124,8 @@ def evaluate_single_class(folder_path, true_class):
     print(f"📄 Saved to: {output_file}")
     print(f"⚠️ Failed log: {failed_log}")
 
-
-# ==============================
-# RUN (MANUAL CONTROL)
-# ==============================
-
 if __name__ == "__main__":
 
-    # 🔥 CHANGE THESE EACH TIME
     FOLDER_PATH = os.path.expanduser("~/Downloads/dataset/hate_speech")
     TRUE_CLASS = "hate"
 

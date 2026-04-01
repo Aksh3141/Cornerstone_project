@@ -9,8 +9,7 @@ export default function UploadBox({ compact = false }) {
   const [error, setError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const navigate = useNavigate();
-
-
+  
   const handleFileChange = (e) => {
     const selected = e.target.files[0];
 

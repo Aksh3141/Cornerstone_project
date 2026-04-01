@@ -106,7 +106,6 @@ export default function Results() {
         const data = await res.json();
         console.log("API DATA:", data);
 
-        // ✅ Only update if this is latest request
         if (requestId === currentRequestId.current) {
           setResults(data);
         }
@@ -114,13 +113,11 @@ export default function Results() {
       } catch (err) {
         console.error(err);
       } finally {
-        // ✅ Only stop loading if latest request
         if (requestId === currentRequestId.current) {
           setLoading(false);
         }
       }
     };
-
     runAnalysis();
   }, [file]);
 
@@ -271,7 +268,7 @@ export default function Results() {
                         {/* PIE */}
                         <PieChart data={mapped} />
 
-                        {/* 🔥 LABELS + BARS */}
+                        {/* LABELS + BARS */}
                         <ul className="mt-4 space-y-2 text-xs w-full">
                           {Object.entries(mapped).map(([label, value]) => (
                             <li key={label} className="space-y-1">

@@ -49,19 +49,28 @@ except Exception as e:
 
 # ==============================
 # PROBABILITY COMBINATION
-# ==============================
+import math
+
+def softmax(values):
+    exps = [math.exp(v) for v in values]
+    s = sum(exps)
+    return [e / s for e in exps]
+
+
 def combine_probs(p_n, p_v):
     """
-    STRICT threshold-based logic (no interpolation)
+    STRICT threshold logic + conditional softmax normalization
     """
 
     # =========================
     # SEXUAL (HARD GATE)
     # =========================
-    if p_n > 0.999:
+    if p_n > 0.9999:
         sexual = 0.97
+        high_sexual = True
     else:
         sexual = 0.02
+        high_sexual = False
 
     # =========================
     # VIOLENCE (BUCKETED)
@@ -74,22 +83,29 @@ def combine_probs(p_n, p_v):
         violence = 0.02
 
     # =========================
-    # NEUTRAL
+    # CASE 1: HIGH SEXUAL → normalize all
     # =========================
-    neutral = 1.0 - (sexual + violence)
+    if high_sexual:
+        neutral = max(0.0, 1.0 - (sexual + violence))
 
-    if neutral < 0:
-        neutral = 0.0
+        vals = softmax([sexual, violence, neutral])
+        sexual, violence, neutral = vals
 
     # =========================
-    # NORMALIZE
+    # CASE 2: LOW SEXUAL → freeze sexual
     # =========================
-    total = sexual + violence + neutral
+    else:
+        # remaining space
+        remaining = 1.0 - sexual
 
-    if total > 0:
-        sexual /= total
-        violence /= total
-        neutral /= total
+        # temporary neutral
+        neutral = max(0.0, 1.0 - (sexual + violence))
+
+        # normalize only v & n using softmax
+        v_n = softmax([violence, neutral])
+
+        violence = remaining * v_n[0]
+        neutral = remaining * v_n[1]
 
     return {
         "neutral": float(neutral),

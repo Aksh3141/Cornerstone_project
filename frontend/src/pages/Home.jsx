@@ -41,14 +41,14 @@ export default function Home() {
             AI-powered video content moderation
           </h1>
 
-          {/* Description (HOW, not WHAT) */}
+          {/* Description*/}
           <p className="mx-auto max-w-2xl text-gray-600 text-lg leading-relaxed mb-6">
             Aegis AI uses a multimodal approach that combines vision, audio, and
             text-based models to analyze video content holistically. This enables
             more reliable and context-aware moderation decisions.
           </p>
 
-          {/* Capability bullets (WHAT the user gets) */}
+          {/* Capability bullets */}
           <div className="mt-6 flex flex-wrap justify-center gap-x-10 gap-y-4 text-sm text-gray-600">
             <div className="flex items-center gap-2">
               <span className="text-brand">•</span>
