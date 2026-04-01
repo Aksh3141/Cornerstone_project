@@ -25,6 +25,18 @@ function PieChart({ data, size = 120, thickness = 22 }) {
 
   const slices = Object.entries(data).map(([label, value]) => {
     const angle = value * 360;
+
+    if (value >= 0.999) {
+      return (
+        <circle
+          key={label}
+          cx={center}
+          cy={center}
+          r={radius}
+          fill={CLASS_COLORS[label]}
+        />
+      );
+    }
     const startAngle = cumulativeAngle;
     const endAngle = cumulativeAngle + angle;
     cumulativeAngle += angle;
@@ -58,6 +70,7 @@ function PieChart({ data, size = 120, thickness = 22 }) {
 export default function Results() {
   const location = useLocation();
   const videoRef = useRef(null);
+  const segmentRef = useRef(null);
   const currentRequestId = useRef(0);
 
   const { videoURL, file } = location.state || {};
@@ -93,7 +106,6 @@ export default function Results() {
         const data = await res.json();
         console.log("API DATA:", data);
 
-        // ✅ Only update if this is latest request
         if (requestId === currentRequestId.current) {
           setResults(data);
         }
@@ -101,93 +113,20 @@ export default function Results() {
       } catch (err) {
         console.error(err);
       } finally {
-        // ✅ Only stop loading if latest request
         if (requestId === currentRequestId.current) {
           setLoading(false);
         }
       }
     };
-
     runAnalysis();
   }, [file]);
 
+  const [showSegments, setShowSegments] = useState(false);
   const data = results;
   const segments = data?.segments || [];
-
-  // ======================
-  // SAFE AVERAGING
-  // ======================
-
-  const averageScores = (segments, modality) => {
-    if (!segments || segments.length === 0) return null;
-
-    const sum = {
-      neutral: 0,
-      sexual_content: 0,
-      violence: 0,
-      hate_speech: 0,
-    };
-
-    let count = 0;
-
-    segments.forEach(seg => {
-      const m = seg?.modalities?.[modality];
-      if (!m) return;
-
-      count++;
-
-      Object.keys(sum).forEach(k => {
-        sum[k] += m[k] || 0;
-      });
-    });
-
-    if (count === 0) return null;
-
-    Object.keys(sum).forEach(k => {
-      sum[k] /= count;
-    });
-
-    return sum;
-  };
-
-  const modalities = {
-    text: data?.modalities?.text || {},
-    audio: averageScores(segments, "audio") || {},
-    vision: averageScores(segments, "vision") || {},
-  };
-
-  const combineModalities = (modalities) => {
-    const combined = {
-      neutral: 0,
-      sexual_content: 0,
-      violence: 0,
-      hate_speech: 0,
-    };
-
-    let count = 0;
-
-    Object.values(modalities).forEach(m => {
-      if (!m || Object.keys(m).length === 0) return;
-
-      count++;
-
-      Object.keys(combined).forEach(k => {
-        combined[k] += m[k] || 0;
-      });
-    });
-
-    if (count === 0) return combined;
-
-    Object.keys(combined).forEach(k => {
-      combined[k] /= count;
-    });
-
-    return combined;
-  };
-
-  const finalScores = combineModalities(modalities);
-
-  const finalLabel = Object.entries(finalScores).sort((a, b) => b[1] - a[1])[0]?.[0] || "neutral";
+  const modalities = data?.modalities || {};
+  const finalScores = data?.final_scores || {};
+  const finalLabel = data?.verdict || "neutral";
 
   return (
     <>
@@ -211,11 +150,40 @@ export default function Results() {
               </div>
             </div>
 
-            <div>
-              <h2 className="text-sm font-semibold mb-4">
-                Flagged segments
+            <div className="mt-6 p-4 rounded-xl border border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 shadow-sm">
+              <h2 className="text-base font-semibold text-gray-800 mb-2">
+                Segment Analysis
               </h2>
-              <p className="text-sm text-gray-500">(Coming soon)</p>
+
+              <p className="text-sm text-gray-600">
+                View detailed analysis for each segment of the video.
+              </p>
+              <p className="text-sm text-gray-500 mb-4">
+                This helps you understand how different parts contributed to the final decision.
+              </p>
+
+              <button
+                onClick={() => {
+                  setShowSegments(prev => {
+                    const next = !prev;
+
+                    if (!prev) {
+                      setTimeout(() => {
+                        segmentRef.current?.scrollIntoView({
+                          behavior: "smooth",
+                          block: "start"
+                        });
+                      }, 100);
+                    }
+
+                    return next;
+                  });
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-black text-white text-sm font-medium hover:bg-gray-900 transition shadow"
+              >
+                {showSegments ? "Hide Segment Analysis" : "Show Segment Analysis"}
+              </button>
+
             </div>
           </section>
 
@@ -300,7 +268,7 @@ export default function Results() {
                         {/* PIE */}
                         <PieChart data={mapped} />
 
-                        {/* 🔥 LABELS + BARS */}
+                        {/* LABELS + BARS */}
                         <ul className="mt-4 space-y-2 text-xs w-full">
                           {Object.entries(mapped).map(([label, value]) => (
                             <li key={label} className="space-y-1">
@@ -338,41 +306,43 @@ export default function Results() {
               </section>
 
               {/* SEGMENTS */}
-              <section>
-                <h2 className="text-lg font-semibold mb-6">
-                  Segment Analysis
-                </h2>
+              {showSegments && (
+                <section ref={segmentRef}>
+                  <h2 className="text-lg font-semibold mb-6">
+                    Segment Analysis
+                  </h2>
 
-                {segments.length === 0 ? (
-                  <p className="text-sm text-gray-500">No segments available</p>
-                ) : (
-                  <div className="space-y-4">
-                    {segments.map((seg, i) => (
-                      <div key={i} className="bg-white p-4 rounded-xl border">
-                        <div className="text-xs text-gray-500 mb-2">
-                          {seg.start?.toFixed(1)}s - {seg.end?.toFixed(1)}s
+                  {segments.length === 0 ? (
+                    <p className="text-sm text-gray-500">No segments available</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {segments.map((seg, i) => (
+                        <div key={i} className="bg-white p-4 rounded-xl border">
+                          <div className="text-xs text-gray-500 mb-2">
+                            {seg.start?.toFixed(1)}s - {seg.end?.toFixed(1)}s
+                          </div>
+
+                          <div className="text-sm mb-3">{seg.text}</div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                            {Object.entries(seg.modalities || {}).map(([mod, scores]) => (
+                              <div key={mod}>
+                                <div className="font-semibold mb-1 capitalize">{mod}</div>
+                                {Object.entries(scores).map(([k, v]) => (
+                                  <div key={k} className="flex justify-between">
+                                    <span>{k}</span>
+                                    <span>{(v * 100).toFixed(1)}%</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ))}
+                          </div>
                         </div>
-
-                        <div className="text-sm mb-3">{seg.text}</div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                          {Object.entries(seg.modalities || {}).map(([mod, scores]) => (
-                            <div key={mod}>
-                              <div className="font-semibold mb-1 capitalize">{mod}</div>
-                              {Object.entries(scores).map(([k, v]) => (
-                                <div key={k} className="flex justify-between">
-                                  <span>{k}</span>
-                                  <span>{(v * 100).toFixed(1)}%</span>
-                                </div>
-                              ))}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              )}
             </>
           )}
 

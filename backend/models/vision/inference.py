@@ -49,34 +49,70 @@ except Exception as e:
 
 # ==============================
 # PROBABILITY COMBINATION
-# ==============================
+import math
+
+def softmax(values):
+    exps = [math.exp(v) for v in values]
+    s = sum(exps)
+    return [e / s for e in exps]
+
 
 def combine_probs(p_n, p_v):
-    # Step 1: cap overlap
-    overlap = p_n * p_v
+    """
+    STRICT threshold logic + conditional softmax normalization
+    """
 
-    # Step 2: adjusted signals
-    p_n_adj = p_n * (1 - p_v)
-    p_v_adj = p_v * (1 - p_n)
+    # =========================
+    # SEXUAL (HARD GATE)
+    # =========================
+    if p_n > 0.9999:
+        sexual = 0.97
+        high_sexual = True
+    else:
+        sexual = 0.02
+        high_sexual = False
 
-    # Step 3: neutral = remaining probability mass
-    neutral = max(0.0, 1 - (p_n_adj + p_v_adj + overlap))
+    # =========================
+    # VIOLENCE (BUCKETED)
+    # =========================
+    if p_v > 0.10:
+        violence = 0.85
+    elif p_v >= 0.05:
+        violence = 0.4
+    else:
+        violence = 0.02
 
-    # Step 4: normalize
-    total = neutral + p_n_adj + p_v_adj + overlap
+    # =========================
+    # CASE 1: HIGH SEXUAL → normalize all
+    # =========================
+    if high_sexual:
+        neutral = max(0.0, 1.0 - (sexual + violence))
 
-    if total > 0:
-        neutral /= total
-        p_n_adj /= total
-        p_v_adj /= total
+        vals = softmax([sexual, violence, neutral])
+        sexual, violence, neutral = vals
+
+    # =========================
+    # CASE 2: LOW SEXUAL → freeze sexual
+    # =========================
+    else:
+        # remaining space
+        remaining = 1.0 - sexual
+
+        # temporary neutral
+        neutral = max(0.0, 1.0 - (sexual + violence))
+
+        # normalize only v & n using softmax
+        v_n = softmax([violence, neutral])
+
+        violence = remaining * v_n[0]
+        neutral = remaining * v_n[1]
 
     return {
         "neutral": float(neutral),
-        "sexual_content": float(p_n_adj),
-        "violence": float(p_v_adj),
+        "sexual_content": float(sexual),
+        "violence": float(violence),
         "hate_speech": 0.0
     }
-
 
 # ==============================
 # MAIN INFERENCE FUNCTION

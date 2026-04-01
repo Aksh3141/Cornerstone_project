@@ -21,7 +21,10 @@ It combines deep learning models across multiple modalities and produces:
 - ⏱️ Timestamp-based segmentation
 - 📊 Confidence scores across modalities
 - 📈 Interactive frontend dashboard
+- ⚖️ Multimodal fusion
+- 🔍 Optional OCR pipeline for text-in-video
 - 🧩 Segment-level explainability
+- 📈 Dataset evaluation pipeline
 
 ---
 
@@ -45,7 +48,11 @@ For each segment:
 ↓
 Segment-wise results
 ↓
-Frontend aggregation & visualization
+Modality aggregation (backend)
+↓
+Weighted multimodal fusion
+↓
+Final verdict + confidence
 ```
 ---
 
@@ -60,12 +67,15 @@ Cornerstone_Project/
 │   │   │   └── inference.py
 │   │   │
 │   │   ├── vision/
-│   │   │   ├── best_model.pt
+│   │   │   ├── violence_best.pth
+│   │   │   ├── nudity_best.pth
 │   │   │   ├── inference.py
-│   │   │   └── video_model.py
+│   │   │   └── model.py
 │   │   │
 │   │   └── text/
 │   │       ├── inference.py
+│   │       ├── extract_frames.py
+│   │       ├── ocr_processor.py
 │   │       └── roberta/
 │   │           ├── config.json
 │   │           ├── tokenizer.json
@@ -85,6 +95,7 @@ Cornerstone_Project/
 │   ├── uploads/
 │   ├── temp/
 │   └── main.py
+│   └── evaluation.py
 │
 ├── frontend/
 │   ├── src/
@@ -178,18 +189,44 @@ backend/models/
         └── model.safetensors
 ```
 ---
+
+## ⚖️ Fusion Strategy
+
+Aegis AI uses weighted multimodal fusion:
+
+- Hate Speech → Text dominant
+- Violence → Vision-heavy
+- Sexual Content → Vision + Audio
+- Neutral → Balanced
+
+Final scores are normalized to form a valid probability distribution.
+
+---
+
 ## 📊 Output Format
 ```
 The backend returns:
 {
   "verdict": "violence",
   "confidence": 0.82,
-  "transcript": "...",
+
+  "final_scores": {
+    "neutral": 0.1,
+    "violence": 0.7,
+    "sexual_content": 0.1,
+    "hate_speech": 0.1
+  },
+
+  "modalities": {
+    "text": {...},
+    "audio": {...},
+    "vision": {...}
+  },
+
   "segments": [
     {
       "start": 2.0,
       "end": 6.5,
-      "text": "...",
       "modalities": {
         "text": {...},
         "audio": {...},
@@ -203,19 +240,20 @@ The backend returns:
 
 ## 🚧 Current Limitations
 
-- Models are not fully optimized (non-SOTA)
-- Processing is slower due to segment-wise video slicing
-- Audio & vision are computed per segment (expensive but accurate)
+- Models are not SOTA (research prototype)
+- Processing is slow due to per-segment inference
+- OCR is global (not timestamp-aligned)
+- No real-time streaming support yet
 
 ---
 
 ## 🔮 Future Improvements
 
-- ⚡ Faster pipeline using FFmpeg instead of MoviePy  
-- 🧠 Better aggregation (weighted pooling)  
-- 🎯 Improved model accuracy  
-- 🎥 Clickable timeline UI  
-- 🌐 Scalable deployment  
+- ⚡ Optimize pipeline (FFmpeg, batching)
+- 🎯 Smarter fusion (Ensemble Learning/MLP)
+- ⏱️ Timestamp-level UI interaction
+- 🌐 Scalable deployment (GPU inference)
+- 📡 Live-stream moderation support 
 
 ---
 

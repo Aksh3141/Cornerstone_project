@@ -48,7 +48,7 @@ export default function API() {
               </ul>
             </section>
 
-            {/* Output example (conceptual, not fake) */}
+            {/* Output example */}
             <section>
               <h2 className="text-xl font-semibold mb-4">
                 Response Structure
