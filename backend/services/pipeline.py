@@ -157,114 +157,70 @@ def average_modalities(segment_results, modality):
 
 
 def combine_modalities(modalities):
+    """
+    Naive baseline: simple averaging across modalities + normalization
+    """
 
-    text = modalities["text"]
-    audio = modalities["audio"]
-    vision = modalities["vision"]
+    text = modalities.get("text", {})
+    audio = modalities.get("audio", {})
+    vision = modalities.get("vision", {})
 
-    scores = {
-        "neutral": 0.0,
-        "sexual_content": 0.0,
-        "violence": 0.0,
-        "hate_speech": 0.0
-    }
+    classes = ["neutral", "sexual_content", "violence", "hate_speech"]
 
-    vision_sex = vision.get("sexual_content", 0)
-    text_hate = text.get("hate_speech", 0)
+    final_scores = {}
 
-    # =========================
-    # PRIORITY 1: SEXUAL
-    # =========================
-    if vision_sex > 0.95:
+    for cls in classes:
+        t = text.get(cls, 0.0)
+        a = audio.get(cls, 0.0)
+        v = vision.get(cls, 0.0)
 
-        scores["sexual_content"] = 0.9
+        # simple average
+        final_scores[cls] = (t + a + v) / 3.0
 
-        remaining = 1.0 - scores["sexual_content"]
+    # normalize (just in case)
+    total = sum(final_scores.values())
 
-        v = (
-            0.6 * vision.get("violence", 0) +
-            0.25 * audio.get("violence", 0) +
-            0.15 * text.get("violence", 0)
-        )
-
-        v = max(0.0, min(v, 1.0))
-        n = 1.0 - v
-
-        total = v + n
-        if total > 0:
-            v /= total
-            n /= total
-
-        scores["violence"] = remaining * v
-        scores["neutral"] = remaining * n
-        scores["hate_speech"] = 0.0
-
-        return scores
-
-    # =========================
-    # PRIORITY 2: HATE
-    # =========================
-    if text_hate > 0.1:
-
-        scores["hate_speech"] = 0.85
-
-        remaining = 1.0 - scores["hate_speech"]
-
-        v = (
-            0.6 * vision.get("violence", 0) +
-            0.25 * audio.get("violence", 0) +
-            0.15 * text.get("violence", 0)
-        )
-
-        v = max(0.0, min(v, 1.0))
-        n = 1.0 - v
-
-        total = v + n
-        if total > 0:
-            v /= total
-            n /= total
-
-        scores["violence"] = remaining * v
-        scores["neutral"] = remaining * n
-
-        scores["sexual_content"] = 0.01  # suppress sexual
-
-        return scores
-
-    # =========================
-    # NO HARD RULE → FUSION
-    # =========================
-
-    v = (
-        0.6 * vision.get("violence", 0) +
-        0.25 * audio.get("violence", 0) +
-        0.15 * text.get("violence", 0)
-    )
-
-    v = max(0.0, min(v, 1.0))
-    n = 1.0 - v
-
-    total = v + n
     if total > 0:
-        v /= total
-        n /= total
+        for cls in final_scores:
+            final_scores[cls] /= total
 
-    scores["violence"] = v
-    scores["neutral"] = n
+    return final_scores
 
-    # enforce NOT sexual / NOT hate
-    scores["sexual_content"] = min(0.05, vision_sex * 0.05)
-    scores["hate_speech"] = min(0.05, text_hate * 0.05)
+def adjust_text_probs(text_probs):
+    """
+    Fix confusion between hate_speech and violence in text modality
+    """
+
+    hate = text_probs.get("hate_speech", 0.0)
+    violence = text_probs.get("violence", 0.0)
 
     # =========================
-    # FINAL NORMALIZATION
+    # CASE 1: hate strong
     # =========================
-    total = sum(scores.values())
+    if hate > 0.1:
+        if violence > 0.01:
+            excess = violence - 0.01
+            text_probs["violence"] = 0.01
+            text_probs["hate_speech"] += excess
+
+    # =========================
+    # CASE 2: hate weak
+    # =========================
+    else:
+        if hate > 0.01:
+            excess = hate - 0.01
+            text_probs["hate_speech"] = 0.01
+            text_probs["violence"] += excess
+
+    # =========================
+    # NORMALIZE
+    # =========================
+    total = sum(text_probs.values())
     if total > 0:
-        for k in scores:
-            scores[k] /= total
+        for k in text_probs:
+            text_probs[k] /= total
 
-    return scores
+    return text_probs
 
 def process_video(video_path: str):
 
@@ -384,7 +340,8 @@ def process_video(video_path: str):
             segment_results,
             full_transcript=" ".join(full_transcript)
         )
-
+        text_modality = adjust_text_probs(text_modality)
+        
         # average audio + vision
         def avg_modality(name):
             avg = {k: 0.0 for k in ["neutral","sexual_content","violence","hate_speech"]}
