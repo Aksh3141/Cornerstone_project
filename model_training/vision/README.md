@@ -37,7 +37,7 @@ Two identical model instances are trained separately — one for **violence** de
 
 | Task | Dataset | Size | Classes |
 |---|---|---|---|
-| Violence | RWF-2000 + SCVD | 2,000 + SCVD clips | Violent / Non-Violent |
+| Violence | RWF-2000 + SCVD | ~2,800 clips | Violent / Non-Violent |
 | Nudity | Curated (internet) | 1,300 clips | Nudity / Safe |
 
 **Violence — RWF-2000 Dataset**
