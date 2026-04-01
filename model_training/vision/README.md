@@ -37,14 +37,41 @@ Two identical model instances are trained separately — one for **violence** de
 
 | Task | Dataset | Size | Classes |
 |---|---|---|---|
-| Violence | RWF-2000 | 2,000 clips | Violent / Non-Violent |
+| Violence | RWF-2000 + SCVD | 2,000 + SCVD clips | Violent / Non-Violent |
 | Nudity | Curated (internet) | 1,300 clips | Nudity / Safe |
+
+**Violence — RWF-2000 Dataset**
+2,000 clips sourced from real-world street fights and crowd violence scenarios. Classes are balanced between Violent and Non-Violent, enabling robust violence detection across diverse real-world conditions.
+
+**Violence — SCVD Dataset (Smart-City CCTV Violence Detection)**
+A novel benchmark dataset specifically designed for CCTV-based violence detection in smart city environments. Unlike existing datasets such as NTU CCTV-Fights and Real-Life Violence Situations (RLVS) — which contain phone-recorded videos that alter distribution and focus — SCVD is composed entirely of CCTV footage, making it more suitable for real-world surveillance applications. It also introduces a **weapons detection class**, the first of its kind in video form, covering any handheld object that could be used to harm humans or property (beyond just guns/knives).
+
+Both violence datasets are combined to train a single violence detection model.
+
+**Nudity — Curated Dataset**
+1,300 clips collected from the internet with variability in scenes and conditions for robust nudity detection.
 
 **Preprocessing applied to all videos:**
 - Fixed clip length: **16 frames** uniformly sampled
 - Frame resolution: **224 × 224**
 - Normalization: ImageNet mean/std `([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])`
 - Training augmentations: Random horizontal flip, ColorJitter
+
+### Citation
+If you use the SCVD dataset, please cite:
+​```bibtex
+@InProceedings{10.1007/978-3-031-62269-4_2,
+  author    = {Aremu, Toluwani and Zhiyuan, Li and Alameeri, Reem and Khan, Mustaqeem and Saddik, Abdulmotaleb El},
+  editor    = {Arai, Kohei},
+  title     = {SSIVD-Net: A Novel Salient Super Image Classification and Detection Technique for Weaponized Violence},
+  booktitle = {Intelligent Computing},
+  year      = {2024},
+  publisher = {Springer Nature Switzerland},
+  address   = {Cham},
+  pages     = {16--35},
+  isbn      = {978-3-031-62269-4}
+}
+​```
 
 ---
 
