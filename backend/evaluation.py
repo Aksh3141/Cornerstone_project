@@ -6,46 +6,51 @@ import time
 
 BACKEND_URL = "http://127.0.0.1:8000/api/moderate-video"
 
-REQUEST_TIMEOUT = 180  # seconds
+DATASET_PATH = os.path.expanduser("~/Downloads/dataset")
+
+CLASS_FOLDERS = [
+    "violence",
+    "hate_speech",
+    "sexual_content",
+    "neutral"
+]
+
+OUTPUT_FILE = "evaluation_results.xlsx"
+FAILED_LOG = "failed_videos.txt"
+
+REQUEST_TIMEOUT = 180
 DELAY_BETWEEN_REQUESTS = 2
 
-def get_videos_from_folder(folder_path, true_class):
-    data = []
-
-    if not os.path.exists(folder_path):
-        print(f"❌ Folder not found: {folder_path}")
-        return data
-
-    for file in os.listdir(folder_path):
-        if file.lower().endswith((".mp4", ".avi", ".mov", ".mkv", ".webm")):
-            data.append({
-                "path": os.path.join(folder_path, file),
-                "true_class": true_class,
-                "name": file
-            })
-
-    return data
-
-
-
-# Round Function
 def r(x):
     return round(float(x), 2) if x is not None else 0.0
 
-# Main Evaluation
+def get_all_videos():
+    data = []
 
-def evaluate_single_class(folder_path, true_class):
-    videos = get_videos_from_folder(folder_path, true_class)
+    for cls in CLASS_FOLDERS:
+        folder = os.path.join(DATASET_PATH, cls)
 
-    print(f"\n🎥 Found {len(videos)} videos in '{true_class}'\n")
+        if not os.path.exists(folder):
+            print(f"⚠️ Missing folder: {folder}")
+            continue
+
+        for file in os.listdir(folder):
+            if file.lower().endswith((".mp4", ".avi", ".mov", ".mkv", ".webm")):
+                data.append({
+                    "path": os.path.join(folder, file),
+                    "true_class": cls,
+                    "name": file
+                })
+    return data
+
+def evaluate():
+    videos = get_all_videos()
+    print(f"🎥 Found {len(videos)} videos\n")
 
     rows = []
 
-    output_file = f"evaluation_{true_class}.xlsx"
-    failed_log = f"failed_{true_class}.txt"
-
     for i, vid in enumerate(tqdm(videos)):
-        print(f"\n➡️ [{i+1}/{len(videos)}] Processing: {vid['name']}")
+        print(f"\n➡️ [{i+1}/{len(videos)}] Processing: {vid['name']} ({vid['true_class']})")
 
         try:
             with open(vid["path"], "rb") as f:
@@ -78,7 +83,7 @@ def evaluate_single_class(folder_path, true_class):
                 "true_class": vid["true_class"],
                 "predicted_class": predicted,
 
-                # FINAL (rounded)
+                # FINAL
                 "final_neutral": r(final_scores.get("neutral", 0)),
                 "final_sexual": r(final_scores.get("sexual_content", 0)),
                 "final_violence": r(final_scores.get("violence", 0)),
@@ -105,28 +110,23 @@ def evaluate_single_class(folder_path, true_class):
 
             rows.append(row)
 
-            # SAVE AFTER EACH VIDEO
+            # SAVE PROGRESS
             df = pd.DataFrame(rows)
-            df.to_excel(output_file, index=False)
+            df.to_excel(OUTPUT_FILE, index=False)
 
             time.sleep(DELAY_BETWEEN_REQUESTS)
 
         except Exception as e:
             print(f"❌ Failed: {vid['name']} → {e}")
 
-            with open(failed_log, "a") as f:
+            with open(FAILED_LOG, "a") as f:
                 f.write(f"{vid['path']}\n")
 
             time.sleep(3)
             continue
 
-    print(f"\n✅ Done: {true_class}")
-    print(f"📄 Saved to: {output_file}")
-    print(f"⚠️ Failed log: {failed_log}")
+    print(f"\n✅ Completed. Results saved to {OUTPUT_FILE}")
+    print(f"⚠️ Failed videos logged in {FAILED_LOG}")
 
 if __name__ == "__main__":
-
-    FOLDER_PATH = os.path.expanduser("~/Downloads/dataset/hate_speech")
-    TRUE_CLASS = "hate"
-
-    evaluate_single_class(FOLDER_PATH, TRUE_CLASS)
+    evaluate()

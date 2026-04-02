@@ -9,10 +9,6 @@ import torch.nn as nn
 import torchvision.transforms as T
 import timm
 
-# ==============================
-# CONFIG
-# ==============================
-
 @dataclass
 class Config:
     violence_model_path: str = "models/vision/violence_best.pth"
@@ -26,11 +22,6 @@ class Config:
     backbone_name: str = "convnext_tiny.fb_in1k"
     embed_dim: int = 768
     proj_dim: int = 512
-
-
-# ==============================
-# IMAGE UTILS
-# ==============================
 
 def load_image_rgb(frame):
     return Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
@@ -68,11 +59,6 @@ def read_video(video_path, num_frames):
 
     return frames[:num_frames]
 
-
-# ==============================
-# TRANSFORM
-# ==============================
-
 def build_transform(image_size):
     return T.Compose([
         T.Resize((image_size, image_size)),
@@ -81,10 +67,6 @@ def build_transform(image_size):
                     [0.229, 0.224, 0.225]),
     ])
 
-
-# ==============================
-# PREPROCESS
-# ==============================
 
 def preprocess(video_path, cfg=None):
     if cfg is None:
@@ -102,10 +84,6 @@ def preprocess(video_path, cfg=None):
 
     return video.unsqueeze(0)  # [1, T, C, H, W]
 
-
-# ==============================
-# MODEL
-# ==============================
 
 class Model(nn.Module):
     def __init__(self, cfg: Config):

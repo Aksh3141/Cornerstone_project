@@ -11,10 +11,6 @@ from models.text.ocr_processor import run_ocr_on_frames
 
 from langdetect import detect
 
-# ==============================
-# CONFIG
-# ==============================
-
 CLASSES = ["neutral", "sexual_content", "violence", "hate_speech"]
 
 BASE_DIR = os.path.dirname(__file__)
@@ -24,9 +20,6 @@ TEMP_OCR_DIR = os.path.join("temp", "ocr_frames")
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# ==============================
-# LOAD MODELS
-# ==============================
 
 print("🧠 Loading Text Model...")
 
@@ -43,10 +36,6 @@ try:
 except:
     trans_tokenizer = None
     trans_model = None
-
-# ==============================
-# HELPERS
-# ==============================
 
 def clean_text(text):
     if not text:
@@ -108,10 +97,6 @@ def extract_ocr_text(video_path):
         print(f"❌ OCR error: {e}")
         return ""
 
-# ==============================
-# KEYWORD OVERRIDE
-# ==============================
-
 KEYWORDS = {
     "violence": ["kill", "murder", "shoot", "attack", "die", "blood"],
     "sexual_content": ["sex", "nude", "porn", "xxx", "naked"],
@@ -129,11 +114,6 @@ def keyword_override(text):
                 scores[label] += 0.2
 
     return scores
-
-
-# ==============================
-# CORE MODEL
-# ==============================
 
 def classify_text(text):
 
@@ -179,38 +159,27 @@ def classify_text(text):
         "hate_speech": float(sum(p[2] for p in all_probs) / n)
     }
 
-
-# ==============================
-# FINAL PIPELINE FUNCTION
-# ==============================
-
 def predict_text(text, ocr_text=None):
 
     try:
-        # 1. CLEAN TRANSCRIPT
         text = clean_text(text)
 
         if is_garbage_text(text):
             text = ""
 
-        # 2. LANGUAGE + TRANSLATION
         if text:
             lang = detect_language(text)
 
             if lang == "hi":
                 text = translate_to_english(text)
 
-        # 3. CLEAN OCR
         ocr_text = clean_text(ocr_text or "")
-
-        # 4. COMBINE
         combined = f"{text} {ocr_text}".strip()
 
         print("TRANSCRIPT:", text)
         print("OCR TEXT:", ocr_text)
         print("COMBINED:", combined)
 
-        # 🔥 FIX: only neutral if BOTH empty
         if not text and not ocr_text:
             return {
                 "neutral": 1.0,
@@ -219,16 +188,13 @@ def predict_text(text, ocr_text=None):
                 "hate_speech": 0.0
             }
 
-        # 5. MODEL
         base_scores = classify_text(combined)
 
-        # 6. KEYWORD BOOST
         keyword_scores = keyword_override(combined)
 
         for k in base_scores:
             base_scores[k] += keyword_scores[k]
 
-        # 7. NORMALIZE
         total = sum(base_scores.values())
         if total > 0:
             for k in base_scores:
