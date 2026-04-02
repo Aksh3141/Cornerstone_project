@@ -1,11 +1,7 @@
 import os
 import torch
-
+import math
 from models.vision.model import Model, Config, preprocess
-
-# ==============================
-# CONFIG
-# ==============================
 
 CLASSES = ["neutral", "sexual_content", "violence", "hate_speech"]
 
@@ -15,10 +11,6 @@ VIOLENCE_MODEL_PATH = os.path.join(BASE_DIR, "violence_best.pth")
 NUDITY_MODEL_PATH = os.path.join(BASE_DIR, "nudity_best.pth")
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-# ==============================
-# LOAD MODELS (ONCE)
-# ==============================
 
 print("🎥 Loading Vision Models...")
 
@@ -46,11 +38,6 @@ except Exception as e:
     violence_model = None
     nudity_model = None
 
-
-# ==============================
-# PROBABILITY COMBINATION
-import math
-
 def softmax(values):
     exps = [math.exp(v) for v in values]
     s = sum(exps)
@@ -58,13 +45,6 @@ def softmax(values):
 
 
 def combine_probs(p_n, p_v):
-    """
-    STRICT threshold logic + conditional softmax normalization
-    """
-
-    # =========================
-    # SEXUAL (HARD GATE)
-    # =========================
     if p_n > 0.9999:
         sexual = 0.97
         high_sexual = True
@@ -72,9 +52,6 @@ def combine_probs(p_n, p_v):
         sexual = 0.02
         high_sexual = False
 
-    # =========================
-    # VIOLENCE (BUCKETED)
-    # =========================
     if p_v > 0.10:
         violence = 0.85
     elif p_v >= 0.05:
@@ -82,18 +59,12 @@ def combine_probs(p_n, p_v):
     else:
         violence = 0.02
 
-    # =========================
-    # CASE 1: HIGH SEXUAL → normalize all
-    # =========================
     if high_sexual:
         neutral = max(0.0, 1.0 - (sexual + violence))
 
         vals = softmax([sexual, violence, neutral])
         sexual, violence, neutral = vals
 
-    # =========================
-    # CASE 2: LOW SEXUAL → freeze sexual
-    # =========================
     else:
         # remaining space
         remaining = 1.0 - sexual
@@ -114,10 +85,6 @@ def combine_probs(p_n, p_v):
         "hate_speech": 0.0
     }
 
-# ==============================
-# MAIN INFERENCE FUNCTION
-# ==============================
-
 def predict_vision(video_path: str):
     """
     Input: video clip path
@@ -128,7 +95,7 @@ def predict_vision(video_path: str):
         return {c: 0.0 for c in CLASSES}
 
     try:
-        # Preprocess video → tensor
+        # Preprocess video -> tensor
         video = preprocess(video_path).to(DEVICE)
 
         with torch.no_grad():

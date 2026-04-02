@@ -6,18 +6,12 @@ import time
 from models.audio.inference import predict_audio
 from models.vision.inference import predict_vision
 from models.text.inference import predict_text, extract_ocr_text
-
 from utils.media import extract_audio_from_video, get_video_duration
 from utils.transcription import transcribe_audio
-
 from moviepy.video.io.VideoFileClip import VideoFileClip
 
 TEMP_DIR = "temp"
 USE_OCR = False
-
-# ==============================
-# CLAMP SEGMENTS
-# ==============================
 
 def clamp_segments(segments, video_duration):
     fixed = []
@@ -37,11 +31,6 @@ def clamp_segments(segments, video_duration):
 
     return fixed
 
-
-# ==============================
-# FALLBACK SEGMENTS
-# ==============================
-
 def create_fallback_segments(video_duration, chunk_size=7.0):
     segments = []
     start = 0.0
@@ -58,11 +47,6 @@ def create_fallback_segments(video_duration, chunk_size=7.0):
         start = end
 
     return segments
-
-
-# ==============================
-# TEXT AGGREGATION
-# ==============================
 
 def aggregate_text_segments(segment_results, full_transcript=""):
 
@@ -122,10 +106,6 @@ def aggregate_text_segments(segment_results, full_transcript=""):
     return avg
 
 
-# ==============================
-# MAIN PIPELINE
-# ==============================
-
 def average_modalities(segment_results, modality):
     if not segment_results:
         return {
@@ -164,9 +144,6 @@ def combine_modalities(modalities):
 
     classes = ["neutral", "sexual_content", "violence", "hate_speech"]
 
-    # -------------------------
-    # Helper: naive average
-    # -------------------------
     def avg(cls):
         return (
             text.get(cls, 0.0) +
@@ -174,23 +151,15 @@ def combine_modalities(modalities):
             vision.get(cls, 0.0)
         ) / 3.0
 
-    # -------------------------
-    # HATE DOMINATING
-    # -------------------------
     def hate_dominating():
         final_scores = {}
 
         text_hate = text.get("hate_speech", 0.0)
-
-        # fix hate
         final_hate = text_hate * 1.5
-        final_hate = min(final_hate, 1.0)  # safety
-
+        final_hate = min(final_hate, 1.0)  
         final_scores["hate_speech"] = final_hate
-
         remaining = 1.0 - final_hate
 
-        # naive for others
         temp = {
             "neutral": avg("neutral"),
             "sexual_content": avg("sexual_content"),
@@ -208,23 +177,16 @@ def combine_modalities(modalities):
 
         return final_scores
 
-    # -------------------------
-    # SEXUAL DOMINATING
-    # -------------------------
     def sexual_dominating():
         final_scores = {}
 
         vision_sex = vision.get("sexual_content", 0.0)
-
-        # fix sexual
         final_sex = vision_sex * 1.2
-        final_sex = min(final_sex, 1.0)  # safety
+        final_sex = min(final_sex, 1.0)
 
         final_scores["sexual_content"] = final_sex
-
         remaining = 1.0 - final_sex
 
-        # naive for others
         temp = {
             "neutral": avg("neutral"),
             "violence": avg("violence"),
@@ -232,7 +194,6 @@ def combine_modalities(modalities):
         }
 
         total = sum(temp.values())
-
         if total > 0:
             for k in temp:
                 final_scores[k] = remaining * (temp[k] / total)
@@ -242,31 +203,19 @@ def combine_modalities(modalities):
 
         return final_scores
 
-    # =========================
-    # CONDITION 1: HATE
-    # =========================
     if text.get("hate_speech", 0.0) > 0.3:
         return hate_dominating()
 
-    # =========================
-    # CONDITION 2: SEXUAL
-    # =========================
     if vision.get("sexual_content", 0.0) > 0.5:
         return sexual_dominating()
 
-    # =========================
-    # FALLBACK
-    # =========================
-
     final_scores = {}
 
-    # suppress hate & sexual
     final_scores["hate_speech"] = avg("hate_speech") * 0.02
     final_scores["sexual_content"] = avg("sexual_content") * 0.02
 
     remaining = 1.0 - (final_scores["hate_speech"] + final_scores["sexual_content"])
 
-    # neutral + violence
     temp = {
         "neutral": avg("neutral"),
         "violence": avg("violence")
@@ -291,27 +240,18 @@ def adjust_text_probs(text_probs):
     hate = text_probs.get("hate_speech", 0.0)
     violence = text_probs.get("violence", 0.0)
 
-    # =========================
-    # CASE 1: hate strong
-    # =========================
     if hate > 0.1:
         if violence > 0.01:
             excess = violence - 0.01
             text_probs["violence"] = 0.01
             text_probs["hate_speech"] += excess
 
-    # =========================
-    # CASE 2: hate weak
-    # =========================
     else:
         if hate > 0.01:
             excess = hate - 0.01
             text_probs["hate_speech"] = 0.01
             text_probs["violence"] += excess
 
-    # =========================
-    # NORMALIZE
-    # =========================
     total = sum(text_probs.values())
     if total > 0:
         for k in text_probs:
@@ -423,15 +363,10 @@ def process_video(video_path: str):
 
         video.close()
 
-        # DELETE MAIN AUDIO
         if os.path.exists(audio_path):
             os.remove(audio_path)
 
         gc.collect()
-
-        # ======================
-        # AGGREGATION
-        # ======================
 
         text_modality = aggregate_text_segments(
             segment_results,
@@ -465,10 +400,6 @@ def process_video(video_path: str):
             "audio": audio_modality,
             "vision": vision_modality
         }
-
-        # ======================
-        # FINAL FUSION (YOUR LOGIC)
-        # ======================
 
         final_scores = combine_modalities(modalities)
 

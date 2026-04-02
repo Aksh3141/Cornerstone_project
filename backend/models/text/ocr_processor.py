@@ -3,10 +3,6 @@ import argparse
 import json
 from difflib import SequenceMatcher
 
-# ==============================
-# 🔥 GLOBAL OCR READER (LOAD ONCE)
-# ==============================
-
 print("🔍 Loading EasyOCR model...")
 
 try:
@@ -16,11 +12,6 @@ try:
 except Exception as e:
     print(f"❌ EasyOCR load error: {e}")
     reader = None
-
-
-# ==============================
-# OCR FUNCTION
-# ==============================
 
 def run_ocr_on_frames(frame_data, min_confidence=0.40):
     """
@@ -56,7 +47,7 @@ def run_ocr_on_frames(frame_data, min_confidence=0.40):
         if not current_frame_text:
             continue
 
-        # 🔥 Deduplication
+        # Deduplication
         if last_seen_text:
             similarity = SequenceMatcher(
                 None,
@@ -73,11 +64,6 @@ def run_ocr_on_frames(frame_data, min_confidence=0.40):
         print(f"    [{timestamp:5.1f}s] OCR: \"{current_frame_text[:60]}...\"")
 
     return all_text_results
-
-
-# ==============================
-# CLI TESTING
-# ==============================
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run OCR on images.")

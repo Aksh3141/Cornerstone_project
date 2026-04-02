@@ -13,13 +13,6 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.post("/moderate-video")
 async def moderate_video(file: UploadFile = File(...)):
-    """
-    Upload video → run pipeline → return moderation results
-    """
-
-    # ==============================
-    # 1. SAVE FILE (UNIQUE NAME)
-    # ==============================
     try:
         unique_id = str(uuid.uuid4())
         ext = os.path.splitext(file.filename)[1]
@@ -36,9 +29,6 @@ async def moderate_video(file: UploadFile = File(...)):
             "message": f"File upload failed: {str(e)}"
         }
 
-    # ==============================
-    # 2. RUN PIPELINE
-    # ==============================
     try:
         result = process_video(video_path)
 
@@ -47,19 +37,12 @@ async def moderate_video(file: UploadFile = File(...)):
             "status": "error",
             "message": f"Processing failed: {str(e)}"
         }
-
-    # ==============================
-    # 3. CLEANUP VIDEO FILE
-    # ==============================
     try:
         if os.path.exists(video_path):
             os.remove(video_path)
     except:
         pass
 
-    # ==============================
-    # 4. RETURN RESPONSE
-    # ==============================
     return {
         "status": "success",
         **result
